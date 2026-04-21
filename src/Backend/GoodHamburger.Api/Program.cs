@@ -3,12 +3,14 @@ using GoodHamburger.Application;
 using GoodHamburger.Infrastructure;
 using GoodHamburger.Infrastructure.Data.Context;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.OpenApi;
 
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure();
+builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddFastEndpoints();
 
 // Add services to the container.
@@ -27,7 +29,21 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<GoodHamburgerDbContext>();
-    await dbContext.Database.EnsureCreatedAsync();
+    if (dbContext.Database.ProviderName == "Microsoft.EntityFrameworkCore.SqlServer")
+    {
+        var databaseCreator = dbContext.Database.GetService<IRelationalDatabaseCreator>();
+
+        if (!await databaseCreator.ExistsAsync())
+        {
+            await databaseCreator.CreateAsync();
+        }
+
+        await dbContext.Database.MigrateAsync();
+    }
+    else
+    {
+        await dbContext.Database.EnsureCreatedAsync();
+    }
 }
 
 app.UseFastEndpoints();

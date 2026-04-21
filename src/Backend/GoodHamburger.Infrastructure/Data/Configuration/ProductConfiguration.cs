@@ -19,9 +19,6 @@ namespace GoodHamburger.Infrastructure.Data.Configuration
             builder.Property(p => p.Price)
                 .HasColumnType("decimal(18,2)");
 
-            builder.Property(p => p.ImageBytes)
-                .HasColumnType("varbinary(max)");
-
             builder.Property(p => p.Active)
                 .IsRequired();
 
@@ -30,6 +27,16 @@ namespace GoodHamburger.Infrastructure.Data.Configuration
 
             builder.Property(p => p.UpdatedAt)
                 .IsRequired();
+
+            builder.HasOne(p => p.Category)
+                .WithMany(c => c.Products)
+                .HasForeignKey(p => p.CategoryId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.HasOne(p => p.ProductImage)
+                .WithOne(pi => pi.Product)
+                .HasForeignKey<Product>(p => p.ProductImageId)
+                .OnDelete(DeleteBehavior.NoAction);
         }
     }
 }

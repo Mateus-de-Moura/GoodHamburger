@@ -1,16 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GoodHamburger.Application.Dtos
+namespace GoodHamburger.Domain.Entity
 {
-    public class ProductDto
+    public class Category : BaseEntity
     {
-        public Guid Id { get; set; }
         public string Description { get; set; } = string.Empty;
-        public decimal Price { get; set; }
-         public string ImageBase64 { get; set; }
+        public ICollection<Product> Products { get; set; } = new List<Product>();
     }
 }
