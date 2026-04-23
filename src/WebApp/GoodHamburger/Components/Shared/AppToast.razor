@@ -1,0 +1,21 @@
+@namespace GoodHamburger.Components.Shared
+
+@if (Visible && !string.IsNullOrWhiteSpace(Message))
+{
+    <div class="gh-toast-host">
+        <div class="gh-toast @(IsError ? "is-error" : "is-success")" role="status" aria-live="polite">
+            @Message
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool Visible { get; set; }
+
+    [Parameter]
+    public bool IsError { get; set; }
+
+    [Parameter]
+    public string? Message { get; set; }
+}

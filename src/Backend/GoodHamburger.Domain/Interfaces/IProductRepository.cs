@@ -1,16 +1,20 @@
-﻿using Ardalis.Result;
+#nullable enable
+
+using Ardalis.Result;
 using GoodHamburger.Domain.Entity;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using GoodHamburger.Domain.Result;
+using System.Linq.Expressions;
 
 namespace GoodHamburger.Domain.Interfaces
 {
     public interface IProductRepository
     {
-        public Task<Result<List<Product>>> GetAllProducts();
-        public Task<Result<Product>> CreateProduct(Product product);
+        Task<Result<List<Product>>> GetAllProducts(CancellationToken ct);
+        Task<Result<List<Product>>> GetProductsByIds(IEnumerable<Guid> ids, CancellationToken ct);
+        Task<Result<PagedList<Product>>> GetPaged(int pageNumber, int pageSize, CancellationToken ct, Expression<Func<Product, bool>>? expression = null);
+        Task<Result<Product>> CreateProduct(Product product, CancellationToken ct);
+        Task<Result<Product>> GetProductById(Guid id, CancellationToken ct);
+        Task<Result<bool>> UpdateProduct(Product product, CancellationToken ct);
+        Task<Result<bool>> DeleteProduct(Guid id, CancellationToken ct);
     }
 }

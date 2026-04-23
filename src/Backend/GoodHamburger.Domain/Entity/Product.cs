@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+#nullable enable
 
 namespace GoodHamburger.Domain.Entity
 {
@@ -14,7 +10,7 @@ namespace GoodHamburger.Domain.Entity
 
         public Guid CategoryId { get; set; }
         public Guid ProductImageId { get; set; }
-        public Category Category { get; set; }
+        public Category Category { get; set; } = null!;
         public ProductImage? ProductImage { get; set; }
     }
 }

@@ -37,6 +37,69 @@ namespace GoodHamburger.Infrastructure.Data.Configuration
                 .WithOne(pi => pi.Product)
                 .HasForeignKey<Product>(p => p.ProductImageId)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            builder.HasData(
+                new Product
+                {
+                    Id = SeedData.XBurgerProductId,
+                    Name = "X Burger",
+                    Description = "X Burger",
+                    Price = 5.00m,
+                    CategoryId = SeedData.SandwichCategoryId,
+                    ProductImageId = SeedData.XBurgerImageId,
+                    Active = true,
+                    CreatedAt = SeedData.FixedDate,
+                    UpdatedAt = SeedData.FixedDate
+                },
+                new Product
+                {
+                    Id = SeedData.XEggProductId,
+                    Name = "X Egg",
+                    Description = "X Egg",
+                    Price = 4.50m,
+                    CategoryId = SeedData.SandwichCategoryId,
+                    ProductImageId = SeedData.XEggImageId,
+                    Active = true,
+                    CreatedAt = SeedData.FixedDate,
+                    UpdatedAt = SeedData.FixedDate
+                },
+                new Product
+                {
+                    Id = SeedData.XBaconProductId,
+                    Name = "X Bacon",
+                    Description = "X Bacon",
+                    Price = 7.00m,
+                    CategoryId = SeedData.SandwichCategoryId,
+                    ProductImageId = SeedData.XBaconImageId,
+                    Active = true,
+                    CreatedAt = SeedData.FixedDate,
+                    UpdatedAt = SeedData.FixedDate
+                },
+                new Product
+                {
+                    Id = SeedData.FriesProductId,
+                    Name = "Batata frita",
+                    Description = "Batata frita",
+                    Price = 2.00m,
+                    CategoryId = SeedData.SideCategoryId,
+                    ProductImageId = SeedData.FriesImageId,
+                    Active = true,
+                    CreatedAt = SeedData.FixedDate,
+                    UpdatedAt = SeedData.FixedDate
+                },
+                new Product
+                {
+                    Id = SeedData.SodaProductId,
+                    Name = "Refrigerante",
+                    Description = "Refrigerante",
+                    Price = 2.50m,
+                    CategoryId = SeedData.DrinkCategoryId,
+                    ProductImageId = SeedData.SodaImageId,
+                    Active = true,
+                    CreatedAt = SeedData.FixedDate,
+                    UpdatedAt = SeedData.FixedDate
+                }
+            );
         }
     }
 }

@@ -1,7 +1,121 @@
-﻿@page "/"
+@page "/"
+@rendermode InteractiveServer
+@inject ProductApiService ProductApiService
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Painel</PageTitle>
 
-<h1>Hello, world!</h1>
+<section class="home-hero">
+    <div>
+        <p class="hero-kicker">Good Hamburger</p>
+        <h1>Gestao de cardapio e pedidos</h1>
+        <p class="hero-description">
+            Acompanhe rapidamente os numeros do restaurante e acesse as telas operacionais.
+        </p>
+    </div>
+    <button class="btn btn-outline-secondary" @onclick="LoadDashboardAsync" disabled="@isLoading">
+        @(isLoading ? "Atualizando..." : "Atualizar painel")
+    </button>
+</section>
 
-Welcome to your new app.
+<section class="home-stats">
+    <article class="stat-card">
+        <p class="stat-label">Produtos cadastrados</p>
+        <strong class="stat-value">@totalProducts</strong>
+    </article>
+
+    <article class="stat-card">
+        <p class="stat-label">Pedidos registrados</p>
+        <strong class="stat-value">@totalOrders</strong>
+    </article>
+
+    <article class="stat-card">
+        <p class="stat-label">Faturamento estimado</p>
+        <strong class="stat-value">@totalRevenue.ToString("C")</strong>
+    </article>
+</section>
+
+<section class="home-actions">
+    <NavLink class="action-card" href="cardapio">
+        <span class="action-title">Cardapio</span>
+        <span class="action-description">Veja os itens organizados por categoria.</span>
+    </NavLink>
+
+    <NavLink class="action-card" href="pedidos">
+        <span class="action-title">Pedidos</span>
+        <span class="action-description">Monte pedidos e acompanhe o historico.</span>
+    </NavLink>
+
+    <NavLink class="action-card" href="products">
+        <span class="action-title">Produtos</span>
+        <span class="action-description">Cadastre e mantenha os produtos disponiveis.</span>
+    </NavLink>
+</section>
+
+<GoodHamburger.Components.Shared.AppToast Visible="@showToast" IsError="@toastIsError" Message="@toastMessage" />
+
+@code {
+    private int totalProducts;
+    private int totalOrders;
+    private decimal totalRevenue;
+    private bool isLoading;
+    private bool showToast;
+    private bool toastIsError;
+    private string? toastMessage;
+    private CancellationTokenSource? toastCts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardAsync();
+    }
+
+    private async Task LoadDashboardAsync()
+    {
+        isLoading = true;
+
+        try
+        {
+            var productsTask = ProductApiService.GetProductsAsync();
+            var ordersTask = ProductApiService.GetOrdersAsync();
+
+            await Task.WhenAll(productsTask, ordersTask);
+
+            var products = productsTask.Result;
+            var orders = ordersTask.Result;
+
+            totalProducts = products.Count;
+            totalOrders = orders.Count;
+            totalRevenue = orders.Sum(o => o.Total);
+        }
+        catch (Exception ex)
+        {
+            await ShowToastAsync($"Nao foi possivel carregar os dados do painel: {ex.Message}", true);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ShowToastAsync(string message, bool isError)
+    {
+        toastCts?.Cancel();
+        toastCts = new CancellationTokenSource();
+
+        toastMessage = message;
+        toastIsError = isError;
+        showToast = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            await Task.Delay(3000, toastCts.Token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        showToast = false;
+        await InvokeAsync(StateHasChanged);
+    }
+}

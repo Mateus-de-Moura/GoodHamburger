@@ -49,18 +49,99 @@ namespace GoodHamburger.Infrastructure.Migrations
                         {
                             Id = new Guid("071857e9-1dfb-4b81-8300-9b025b4fbf0a"),
                             Active = true,
-                            CreatedAt = new DateTime(2026, 4, 20, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Hamburgers",
-                            UpdatedAt = new DateTime(2026, 4, 20, 0, 0, 0, 0, DateTimeKind.Utc)
+                            CreatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Lanche",
+                            UpdatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc)
                         },
                         new
                         {
                             Id = new Guid("13cecac6-961b-474a-9843-553a057a6c11"),
                             Active = true,
-                            CreatedAt = new DateTime(2026, 4, 20, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Accompaniment",
-                            UpdatedAt = new DateTime(2026, 4, 20, 0, 0, 0, 0, DateTimeKind.Utc)
+                            CreatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Acompanhamento",
+                            UpdatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("3f6577f1-3483-4c64-8cbc-d68f5f0c26e1"),
+                            Active = true,
+                            CreatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Bebida",
+                            UpdatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc)
                         });
+                });
+
+            modelBuilder.Entity("GoodHamburger.Domain.Entity.Order", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("DiscountPercentage")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Total")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Orders", (string)null);
+                });
+
+            modelBuilder.Entity("GoodHamburger.Domain.Entity.OrderItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.ToTable("OrderItems", (string)null);
                 });
 
             modelBuilder.Entity("GoodHamburger.Domain.Entity.Product", b =>
@@ -84,6 +165,7 @@ namespace GoodHamburger.Infrastructure.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Name")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Price")
@@ -103,6 +185,68 @@ namespace GoodHamburger.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Products", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("d9dc5f2b-4f9d-4f7a-8e36-03dcee6eced6"),
+                            Active = true,
+                            CategoryId = new Guid("071857e9-1dfb-4b81-8300-9b025b4fbf0a"),
+                            CreatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "X Burger",
+                            Name = "X Burger",
+                            Price = 5.00m,
+                            ProductImageId = new Guid("8de4bfd9-92f9-4f0f-b4dc-94e2599559d1"),
+                            UpdatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("8f15f4af-8944-43f5-a94d-d3d31b2be7a6"),
+                            Active = true,
+                            CategoryId = new Guid("071857e9-1dfb-4b81-8300-9b025b4fbf0a"),
+                            CreatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "X Egg",
+                            Name = "X Egg",
+                            Price = 4.50m,
+                            ProductImageId = new Guid("a1f83a8d-3ab8-4279-9e0f-38a7c4e67586"),
+                            UpdatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("2f8dd6da-2d2e-4f9b-bab0-bd2ebd56d53f"),
+                            Active = true,
+                            CategoryId = new Guid("071857e9-1dfb-4b81-8300-9b025b4fbf0a"),
+                            CreatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "X Bacon",
+                            Name = "X Bacon",
+                            Price = 7.00m,
+                            ProductImageId = new Guid("32ccdd73-0f6d-4e27-949b-f95f08c5f03c"),
+                            UpdatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("e1477ac0-f99a-4b48-a220-3be6d573c2eb"),
+                            Active = true,
+                            CategoryId = new Guid("13cecac6-961b-474a-9843-553a057a6c11"),
+                            CreatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Batata frita",
+                            Name = "Batata frita",
+                            Price = 2.00m,
+                            ProductImageId = new Guid("22f4ce90-0763-4b1f-a96b-4df20d457de8"),
+                            UpdatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("e36881ad-5bf0-47c7-afba-2d4b7fdc5f77"),
+                            Active = true,
+                            CategoryId = new Guid("3f6577f1-3483-4c64-8cbc-d68f5f0c26e1"),
+                            CreatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Refrigerante",
+                            Name = "Refrigerante",
+                            Price = 2.50m,
+                            ProductImageId = new Guid("cfebf37a-b07f-4adc-8fc3-1f8bfd70f6f0"),
+                            UpdatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc)
+                        });
                 });
 
             modelBuilder.Entity("GoodHamburger.Domain.Entity.ProductImage", b =>
@@ -134,7 +278,75 @@ namespace GoodHamburger.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ProductImage");
+                    b.ToTable("ProductImage", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("8de4bfd9-92f9-4f0f-b4dc-94e2599559d1"),
+                            Active = true,
+                            ContentType = "application/octet-stream",
+                            CreatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FileName = "x-burger-placeholder.txt",
+                            ImageBytes = new byte[0],
+                            ProductId = new Guid("d9dc5f2b-4f9d-4f7a-8e36-03dcee6eced6"),
+                            UpdatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("a1f83a8d-3ab8-4279-9e0f-38a7c4e67586"),
+                            Active = true,
+                            ContentType = "application/octet-stream",
+                            CreatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FileName = "x-egg-placeholder.txt",
+                            ImageBytes = new byte[0],
+                            ProductId = new Guid("8f15f4af-8944-43f5-a94d-d3d31b2be7a6"),
+                            UpdatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("32ccdd73-0f6d-4e27-949b-f95f08c5f03c"),
+                            Active = true,
+                            ContentType = "application/octet-stream",
+                            CreatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FileName = "x-bacon-placeholder.txt",
+                            ImageBytes = new byte[0],
+                            ProductId = new Guid("2f8dd6da-2d2e-4f9b-bab0-bd2ebd56d53f"),
+                            UpdatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("22f4ce90-0763-4b1f-a96b-4df20d457de8"),
+                            Active = true,
+                            ContentType = "application/octet-stream",
+                            CreatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FileName = "batata-frita-placeholder.txt",
+                            ImageBytes = new byte[0],
+                            ProductId = new Guid("e1477ac0-f99a-4b48-a220-3be6d573c2eb"),
+                            UpdatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("cfebf37a-b07f-4adc-8fc3-1f8bfd70f6f0"),
+                            Active = true,
+                            ContentType = "application/octet-stream",
+                            CreatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FileName = "refrigerante-placeholder.txt",
+                            ImageBytes = new byte[0],
+                            ProductId = new Guid("e36881ad-5bf0-47c7-afba-2d4b7fdc5f77"),
+                            UpdatedAt = new DateTime(2026, 4, 22, 0, 0, 0, 0, DateTimeKind.Utc)
+                        });
+                });
+
+            modelBuilder.Entity("GoodHamburger.Domain.Entity.OrderItem", b =>
+                {
+                    b.HasOne("GoodHamburger.Domain.Entity.Order", "Order")
+                        .WithMany("Items")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
                 });
 
             modelBuilder.Entity("GoodHamburger.Domain.Entity.Product", b =>
@@ -159,6 +371,11 @@ namespace GoodHamburger.Infrastructure.Migrations
             modelBuilder.Entity("GoodHamburger.Domain.Entity.Category", b =>
                 {
                     b.Navigation("Products");
+                });
+
+            modelBuilder.Entity("GoodHamburger.Domain.Entity.Order", b =>
+                {
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("GoodHamburger.Domain.Entity.ProductImage", b =>

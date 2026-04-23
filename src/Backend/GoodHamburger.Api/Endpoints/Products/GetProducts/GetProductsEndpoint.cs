@@ -1,5 +1,5 @@
 using FastEndpoints;
-using GoodHamburger.Application.Operations.GetHamburgers;
+using GoodHamburger.Application.Operations.Products.GetProducts;
 using MediatR;
 
 namespace GoodHamburger.Api.Endpoints.Products.GetProducts
@@ -23,3 +23,4 @@ namespace GoodHamburger.Api.Endpoints.Products.GetProducts
         }
     }
 }
+

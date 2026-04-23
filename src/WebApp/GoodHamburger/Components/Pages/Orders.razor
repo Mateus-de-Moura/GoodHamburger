@@ -1,0 +1,627 @@
+@page "/pedidos"
+@page "/orders"
+@rendermode InteractiveServer
+@inject ProductApiService ProductApiService
+
+<PageTitle>Pedidos</PageTitle>
+
+<section class="orders-header">
+    <div>
+        <h1>Pedidos</h1>
+        <p class="subtitle">
+            Selecione os itens por categoria, acompanhe subtotal/desconto em tempo real e finalize quando quiser.
+        </p>
+    </div>
+    <button class="btn btn-outline-secondary" @onclick="LoadDataAsync" disabled="@isLoading || isSubmitting">
+        @(isLoading ? "Atualizando..." : "Atualizar")
+    </button>
+</section>
+
+<div class="order-builder-grid">
+    <section class="menu-categories">
+        <article class="category-section">
+            <header>
+                <h2>Lanches</h2>
+                <button class="btn btn-sm btn-outline-dark" @onclick="ClearSandwichAsync" disabled="@(selectedSandwichId is null)">Limpar</button>
+            </header>
+            @if (menu.Sandwiches.Count == 0)
+            {
+                <p class="muted">Sem itens cadastrados.</p>
+            }
+            else
+            {
+                <div class="category-cards">
+                    @foreach (var item in menu.Sandwiches.OrderBy(i => i.Name))
+                    {
+                        <button type="button" class="@GetCardClass(item.ProductId, selectedSandwichId)" @onclick="() => SelectSandwichAsync(item.ProductId)">
+                            <span class="menu-card-media">
+                                @if (TryGetImageSource(item.ProductId, out var imageSource))
+                                {
+                                    <img src="@imageSource" alt="@item.Name" />
+                                }
+                                else
+                                {
+                                    <span class="menu-card-placeholder">@GetInitials(item.Name)</span>
+                                }
+                            </span>
+                            <span class="menu-card-body">
+                                <h3>@item.Name</h3>
+                                <p class="menu-card-desc">@GetProductDescription(item.ProductId)</p>
+                                <strong>@item.Price.ToString("C")</strong>
+                            </span>
+                        </button>
+                    }
+                </div>
+            }
+        </article>
+
+        <article class="category-section">
+            <header>
+                <h2>Acompanhamentos</h2>
+                <button class="btn btn-sm btn-outline-dark" @onclick="ClearSideAsync" disabled="@(selectedSideId is null)">Limpar</button>
+            </header>
+            @if (menu.Sides.Count == 0)
+            {
+                <p class="muted">Sem itens cadastrados.</p>
+            }
+            else
+            {
+                <div class="category-cards">
+                    @foreach (var item in menu.Sides.OrderBy(i => i.Name))
+                    {
+                        <button type="button" class="@GetCardClass(item.ProductId, selectedSideId)" @onclick="() => SelectSideAsync(item.ProductId)">
+                            <span class="menu-card-media">
+                                @if (TryGetImageSource(item.ProductId, out var imageSource))
+                                {
+                                    <img src="@imageSource" alt="@item.Name" />
+                                }
+                                else
+                                {
+                                    <span class="menu-card-placeholder">@GetInitials(item.Name)</span>
+                                }
+                            </span>
+                            <span class="menu-card-body">
+                                <h3>@item.Name</h3>
+                                <p class="menu-card-desc">@GetProductDescription(item.ProductId)</p>
+                                <strong>@item.Price.ToString("C")</strong>
+                            </span>
+                        </button>
+                    }
+                </div>
+            }
+        </article>
+
+        <article class="category-section">
+            <header>
+                <h2>Bebidas</h2>
+                <button class="btn btn-sm btn-outline-dark" @onclick="ClearDrinkAsync" disabled="@(selectedDrinkId is null)">Limpar</button>
+            </header>
+            @if (menu.Drinks.Count == 0)
+            {
+                <p class="muted">Sem itens cadastrados.</p>
+            }
+            else
+            {
+                <div class="category-cards">
+                    @foreach (var item in menu.Drinks.OrderBy(i => i.Name))
+                    {
+                        <button type="button" class="@GetCardClass(item.ProductId, selectedDrinkId)" @onclick="() => SelectDrinkAsync(item.ProductId)">
+                            <span class="menu-card-media">
+                                @if (TryGetImageSource(item.ProductId, out var imageSource))
+                                {
+                                    <img src="@imageSource" alt="@item.Name" />
+                                }
+                                else
+                                {
+                                    <span class="menu-card-placeholder">@GetInitials(item.Name)</span>
+                                }
+                            </span>
+                            <span class="menu-card-body">
+                                <h3>@item.Name</h3>
+                                <p class="menu-card-desc">@GetProductDescription(item.ProductId)</p>
+                                <strong>@item.Price.ToString("C")</strong>
+                            </span>
+                        </button>
+                    }
+                </div>
+            }
+        </article>
+    </section>
+
+    <aside class="right-column">
+        <section class="cart-panel">
+            <h2>Seu pedido</h2>
+
+            @if (SelectedItems.Count == 0)
+            {
+                <p class="muted">Selecione itens para montar seu pedido.</p>
+            }
+            else
+            {
+                <ul class="cart-items">
+                    @foreach (var item in SelectedItems)
+                    {
+                        <li>
+                            <span>@item.Name</span>
+                            <strong>@item.Price.ToString("C")</strong>
+                        </li>
+                    }
+                </ul>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(previewError))
+            {
+                <p class="preview-error">@previewError</p>
+            }
+
+            <div class="totals-wrap @(isPreviewLoading ? "is-loading" : string.Empty)">
+                <div>
+                    <span>Subtotal</span>
+                    <strong>@PreviewSubtotal.ToString("C")</strong>
+                </div>
+                <div>
+                    <span>Desconto</span>
+                    <strong>@PreviewDiscountAmount.ToString("C") (@(PreviewDiscountPercentage * 100)%)</strong>
+                </div>
+                <div class="total-line">
+                    <span>Total</span>
+                    <strong>@PreviewTotal.ToString("C")</strong>
+                </div>
+            </div>
+
+            <button class="btn btn-primary w-100" @onclick="FinalizeOrderAsync" disabled="@(isSubmitting || SelectedItems.Count == 0 || !string.IsNullOrWhiteSpace(previewError))">
+                @if (isSubmitting)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                }
+                <span>Finalizar pedido</span>
+            </button>
+        </section>
+
+        <section class="history-panel">
+            <div class="history-header">
+                <h2>Historico de pedidos</h2>
+                <div class="history-filters">
+                    <button type="button" class="@GetFilterButtonClass(HistoryFilter.Today)" @onclick="() => SetHistoryFilter(HistoryFilter.Today)">Hoje</button>
+                    <button type="button" class="@GetFilterButtonClass(HistoryFilter.Week)" @onclick="() => SetHistoryFilter(HistoryFilter.Week)">Semana</button>
+                    <button type="button" class="@GetFilterButtonClass(HistoryFilter.All)" @onclick="() => SetHistoryFilter(HistoryFilter.All)">Todos</button>
+                </div>
+            </div>
+
+            @if (isLoading)
+            {
+                <p><em>Carregando pedidos...</em></p>
+            }
+            else if (FilteredOrders.Count == 0)
+            {
+                <p class="muted"><em>Nenhum pedido encontrado para esse filtro.</em></p>
+            }
+            else
+            {
+                <div class="history-list">
+                    @for (var i = 0; i < FilteredOrders.Count; i++)
+                    {
+                        var order = FilteredOrders[i];
+                        <article class="history-item">
+                            <header>
+                                <div>
+                                    <strong>Pedido #@(i + 1)</strong>
+                                    <small>@order.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</small>
+                                </div>
+                                <strong class="total">@order.Total.ToString("C")</strong>
+                            </header>
+                            <p class="history-summary">@GetOrderSummary(order)</p>
+                            <footer>
+                                @if (order.DiscountPercentage > 0)
+                                {
+                                    <span class="discount-pill">@((order.DiscountPercentage * 100).ToString("0"))% OFF</span>
+                                }
+                                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => OpenOrderDetails(order)">Ver detalhes</button>
+                            </footer>
+                        </article>
+                    }
+                </div>
+            }
+        </section>
+    </aside>
+</div>
+
+@if (selectedHistoryOrder is not null)
+{
+    <div class="order-details-backdrop" @onclick="CloseOrderDetails"></div>
+    <section class="order-details-modal" role="dialog" aria-modal="true" @onclick:stopPropagation="true">
+        <header>
+            <h3>Detalhes do pedido</h3>
+            <button type="button" class="btn btn-sm btn-outline-dark" @onclick="CloseOrderDetails">Fechar</button>
+        </header>
+        <p class="details-date">@selectedHistoryOrder.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</p>
+
+        <ul>
+            @foreach (var item in selectedHistoryOrder.Items)
+            {
+                <li>
+                    <span>@item.Name</span>
+                    <strong>@item.UnitPrice.ToString("C")</strong>
+                </li>
+            }
+        </ul>
+
+        <footer>
+            <span>Subtotal: @selectedHistoryOrder.Subtotal.ToString("C")</span>
+            <span>Desconto: @selectedHistoryOrder.DiscountAmount.ToString("C") (@(selectedHistoryOrder.DiscountPercentage * 100)%)</span>
+            <strong>Total: @selectedHistoryOrder.Total.ToString("C")</strong>
+        </footer>
+    </section>
+}
+
+<GoodHamburger.Components.Shared.AppToast Visible="@showToast" IsError="@toastIsError" Message="@toastMessage" />
+
+@code {
+    private MenuModel menu = new();
+    private List<OrderModel> orders = [];
+    private Dictionary<Guid, ProductModel> productsById = [];
+
+    private Guid? selectedSandwichId;
+    private Guid? selectedSideId;
+    private Guid? selectedDrinkId;
+
+    private OrderPreviewModel? preview;
+    private string? previewError;
+
+    private bool isLoading;
+    private bool isSubmitting;
+    private bool isPreviewLoading;
+    private bool showToast;
+    private bool toastIsError;
+    private string? toastMessage;
+    private CancellationTokenSource? toastCts;
+    private HistoryFilter historyFilter = HistoryFilter.Week;
+    private OrderModel? selectedHistoryOrder;
+
+    private List<MenuItemModel> SelectedItems
+        => BuildSelectedItems();
+
+    private decimal PreviewSubtotal => preview?.Subtotal ?? SelectedItems.Sum(i => i.Price);
+    private decimal PreviewDiscountPercentage => preview?.DiscountPercentage ?? 0m;
+    private decimal PreviewDiscountAmount => preview?.DiscountAmount ?? 0m;
+    private decimal PreviewTotal => preview?.Total ?? PreviewSubtotal;
+    private List<OrderModel> FilteredOrders => ApplyHistoryFilter();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        isLoading = true;
+
+        try
+        {
+            var menuTask = ProductApiService.GetMenuAsync();
+            var ordersTask = ProductApiService.GetOrdersAsync();
+            var productsTask = ProductApiService.GetProductsAsync();
+
+            await Task.WhenAll(menuTask, ordersTask, productsTask);
+
+            menu = menuTask.Result;
+            orders = ordersTask.Result;
+            productsById = productsTask.Result.ToDictionary(p => p.Id);
+
+            await RefreshPreviewAsync();
+        }
+        catch (Exception ex)
+        {
+            await ShowToastAsync($"Erro ao carregar dados de pedidos: {ex.Message}", true);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SelectSandwichAsync(Guid productId)
+    {
+        selectedSandwichId = selectedSandwichId == productId ? null : productId;
+        await RefreshPreviewAsync();
+    }
+
+    private async Task SelectSideAsync(Guid productId)
+    {
+        selectedSideId = selectedSideId == productId ? null : productId;
+        await RefreshPreviewAsync();
+    }
+
+    private async Task SelectDrinkAsync(Guid productId)
+    {
+        selectedDrinkId = selectedDrinkId == productId ? null : productId;
+        await RefreshPreviewAsync();
+    }
+
+    private async Task ClearSandwichAsync()
+    {
+        selectedSandwichId = null;
+        await RefreshPreviewAsync();
+    }
+
+    private async Task ClearSideAsync()
+    {
+        selectedSideId = null;
+        await RefreshPreviewAsync();
+    }
+
+    private async Task ClearDrinkAsync()
+    {
+        selectedDrinkId = null;
+        await RefreshPreviewAsync();
+    }
+
+    private async Task RefreshPreviewAsync()
+    {
+        var selectedIds = GetSelectedIds();
+
+        if (selectedIds.Count == 0)
+        {
+            preview = null;
+            previewError = null;
+            return;
+        }
+
+        isPreviewLoading = true;
+        previewError = null;
+
+        try
+        {
+            var result = await ProductApiService.PreviewOrderAsync(selectedIds);
+
+            if (!result.Success || result.Data is null)
+            {
+                preview = null;
+                previewError = result.Message;
+                return;
+            }
+
+            preview = result.Data;
+        }
+        catch (Exception ex)
+        {
+            preview = null;
+            previewError = ex.Message;
+        }
+        finally
+        {
+            isPreviewLoading = false;
+        }
+    }
+
+    private async Task FinalizeOrderAsync()
+    {
+        var selectedIds = GetSelectedIds();
+
+        if (selectedIds.Count == 0)
+        {
+            await ShowToastAsync("Selecione ao menos um item para criar o pedido.", true);
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(previewError))
+        {
+            await ShowToastAsync(previewError, true);
+            return;
+        }
+
+        isSubmitting = true;
+        ApiActionResult? result = null;
+        string toastText;
+        bool isToastError;
+
+        try
+        {
+            result = await ProductApiService.CreateOrderAsync(selectedIds);
+        }
+        catch (Exception ex)
+        {
+            isSubmitting = false;
+            await InvokeAsync(StateHasChanged);
+            await ShowToastAsync($"Erro ao finalizar pedido: {ex.Message}", true);
+            return;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+
+        toastText = ResolveActionMessage(
+            result?.Message,
+            "Pedido finalizado com sucesso.",
+            "Nao foi possivel finalizar o pedido.",
+            result?.Success == true);
+        isToastError = result?.Success != true;
+
+        if (result?.Success == true)
+        {
+            selectedSandwichId = null;
+            selectedSideId = null;
+            selectedDrinkId = null;
+            preview = null;
+            previewError = null;
+
+            orders = await ProductApiService.GetOrdersAsync();
+        }
+
+        await InvokeAsync(StateHasChanged);
+        await ShowToastAsync(toastText, isToastError);
+    }
+
+    private List<Guid> GetSelectedIds()
+    {
+        var ids = new List<Guid>();
+
+        if (selectedSandwichId.HasValue)
+            ids.Add(selectedSandwichId.Value);
+
+        if (selectedSideId.HasValue)
+            ids.Add(selectedSideId.Value);
+
+        if (selectedDrinkId.HasValue)
+            ids.Add(selectedDrinkId.Value);
+
+        return ids;
+    }
+
+    private List<MenuItemModel> BuildSelectedItems()
+    {
+        var items = new List<MenuItemModel>();
+
+        if (selectedSandwichId.HasValue)
+        {
+            var sandwich = menu.Sandwiches.FirstOrDefault(x => x.ProductId == selectedSandwichId.Value);
+            if (sandwich is not null)
+                items.Add(sandwich);
+        }
+
+        if (selectedSideId.HasValue)
+        {
+            var side = menu.Sides.FirstOrDefault(x => x.ProductId == selectedSideId.Value);
+            if (side is not null)
+                items.Add(side);
+        }
+
+        if (selectedDrinkId.HasValue)
+        {
+            var drink = menu.Drinks.FirstOrDefault(x => x.ProductId == selectedDrinkId.Value);
+            if (drink is not null)
+                items.Add(drink);
+        }
+
+        return items;
+    }
+
+    private string GetCardClass(Guid productId, Guid? selectedId)
+    {
+        var isSelected = selectedId.HasValue && selectedId.Value == productId;
+        return $"menu-card {(isSelected ? "selected" : string.Empty)}";
+    }
+
+    private bool TryGetImageSource(Guid productId, out string source)
+    {
+        source = string.Empty;
+
+        if (!productsById.TryGetValue(productId, out var product) ||
+            string.IsNullOrWhiteSpace(product.ImageBase64))
+        {
+            return false;
+        }
+
+        source = $"data:image/png;base64,{product.ImageBase64}";
+        return true;
+    }
+
+    private string GetProductDescription(Guid productId)
+    {
+        if (!productsById.TryGetValue(productId, out var product) ||
+            string.IsNullOrWhiteSpace(product.Description))
+        {
+            return "Descricao nao informada.";
+        }
+
+        return product.Description;
+    }
+
+    private static string GetInitials(string value)
+    {
+        var initials = value
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Take(2)
+            .Select(x => char.ToUpperInvariant(x[0]))
+            .ToArray();
+
+        return initials.Length == 0 ? "GH" : new string(initials);
+    }
+
+    private async Task ShowToastAsync(string message, bool isError)
+    {
+        toastCts?.Cancel();
+        toastCts = new CancellationTokenSource();
+
+        toastMessage = message;
+        toastIsError = isError;
+        showToast = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            await Task.Delay(3000, toastCts.Token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        showToast = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private static string ResolveActionMessage(string? apiMessage, string successMessage, string errorMessage, bool isSuccess)
+    {
+        if (!string.IsNullOrWhiteSpace(apiMessage))
+            return apiMessage;
+
+        return isSuccess ? successMessage : errorMessage;
+    }
+
+    private List<OrderModel> ApplyHistoryFilter()
+    {
+        var now = DateTime.Now;
+        var today = now.Date;
+
+        return historyFilter switch
+        {
+            HistoryFilter.Today => orders
+                .Where(o => o.CreatedAt.ToLocalTime().Date == today)
+                .ToList(),
+            HistoryFilter.Week => orders
+                .Where(o => o.CreatedAt.ToLocalTime() >= now.AddDays(-7))
+                .ToList(),
+            _ => [.. orders]
+        };
+    }
+
+    private void SetHistoryFilter(HistoryFilter filter)
+    {
+        historyFilter = filter;
+    }
+
+    private string GetFilterButtonClass(HistoryFilter filter)
+    {
+        return historyFilter == filter ? "filter-btn active" : "filter-btn";
+    }
+
+    private string GetOrderSummary(OrderModel order)
+    {
+        if (order.Items.Count == 0)
+            return "Sem itens";
+
+        if (order.Items.Count <= 2)
+            return string.Join(" + ", order.Items.Select(i => i.Name));
+
+        return $"{order.Items[0].Name} + {order.Items[1].Name} + {order.Items.Count - 2} item(ns)";
+    }
+
+    private void OpenOrderDetails(OrderModel order)
+    {
+        selectedHistoryOrder = order;
+    }
+
+    private void CloseOrderDetails()
+    {
+        selectedHistoryOrder = null;
+    }
+
+    private enum HistoryFilter
+    {
+        Today,
+        Week,
+        All
+    }
+}

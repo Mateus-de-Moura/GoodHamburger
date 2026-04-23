@@ -1,0 +1,537 @@
+@page "/products"
+@page "/produtos"
+@rendermode InteractiveServer
+@inject ProductApiService ProductApiService
+
+<PageTitle>Produtos</PageTitle>
+
+<section class="products-header">
+    <div>
+        <h1>Produtos</h1>
+        <p class="subtitle">Gestao profissional de cadastro com modal, imagem e paginação no servidor.</p>
+    </div>
+    <div class="header-actions">
+        <button class="btn btn-outline-secondary" @onclick="ReloadPageAsync" disabled="@isLoading">Atualizar</button>
+        <button class="btn btn-primary" @onclick="OpenCreateModal">Novo produto</button>
+    </div>
+</section>
+
+<section class="products-panel">
+    <div class="panel-top">
+        <div>
+            <h2>Lista de produtos</h2>
+            <p>
+                @if (totalItems == 0)
+                {
+                    <span>Sem itens cadastrados.</span>
+                }
+                else
+                {
+                    <span>Exibindo @firstItemIndex ate @lastItemIndex de @totalItems registros.</span>
+                }
+            </p>
+        </div>
+
+        <div class="page-size-wrap">
+            <label for="page-size">Itens por pagina</label>
+            <select id="page-size" class="form-select form-select-sm" value="@pageSize" @onchange="ChangePageSizeAsync">
+                <option value="6">6</option>
+                <option value="8">8</option>
+                <option value="12">12</option>
+                <option value="20">20</option>
+            </select>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <p><em>Carregando produtos...</em></p>
+    }
+    else if (products.Count == 0)
+    {
+        <p><em>Nenhum produto encontrado.</em></p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Foto</th>
+                        <th>Nome</th>
+                        <th>Categoria</th>
+                        <th class="text-end">Preco</th>
+                        <th class="text-end">Acoes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var product in products)
+                    {
+                        <tr>
+                            <td>
+                                <div class="table-thumb">
+                                    @if (!string.IsNullOrWhiteSpace(product.ImageBase64))
+                                    {
+                                        <img src="@($"data:image/png;base64,{product.ImageBase64}")" alt="@product.Name" />
+                                    }
+                                    else
+                                    {
+                                        <span>@GetInitials(product.Name)</span>
+                                    }
+                                </div>
+                            </td>
+                            <td>@product.Name</td>
+                            <td>@product.CategoryDescription</td>
+                            <td class="text-end">@product.Price.ToString("C")</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => OpenEditModal(product)">Editar</button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAsync(product.Id)">Excluir</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <div class="pagination-bar">
+        <button class="btn btn-sm btn-outline-secondary" @onclick="PreviousPageAsync" disabled="@(!CanGoPrevious || isLoading)">Anterior</button>
+        <span>Pagina @pageNumber de @totalPages</span>
+        <button class="btn btn-sm btn-outline-secondary" @onclick="NextPageAsync" disabled="@(!CanGoNext || isLoading)">Proxima</button>
+    </div>
+</section>
+
+@if (isModalOpen)
+{
+    <div class="modal-backdrop-custom" @onclick="CloseModal"></div>
+    <div class="product-modal-shell">
+        <section class="product-modal" role="dialog" aria-modal="true" @onclick:stopPropagation="true">
+            <header class="modal-header">
+                <div>
+                    <h3>@(isEditing ? "Editar produto" : "Novo produto")</h3>
+                    <p>@(isEditing ? "Atualize os dados do item selecionado." : "Preencha os dados para cadastrar um novo item.")</p>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-dark" @onclick="CloseModal" disabled="@isSubmitting">Fechar</button>
+            </header>
+
+            <EditForm Model="formModel" OnValidSubmit="SaveAsync" enctype="multipart/form-data">
+                <DataAnnotationsValidator />
+
+                <div class="modal-body-grid">
+                    <div class="form-grid">
+                        <div>
+                            <label class="form-label" for="name">Nome</label>
+                            <InputText id="name" class="form-control" @bind-Value="formModel.Name" />
+                        </div>
+
+                        <div>
+                            <label class="form-label" for="description">Descricao</label>
+                            <InputText id="description" class="form-control" @bind-Value="formModel.Description" />
+                        </div>
+
+                        <div>
+                            <label class="form-label" for="price">Preco</label>
+                            <InputNumber id="price" class="form-control" @bind-Value="formModel.Price" />
+                        </div>
+
+                        <div>
+                            <label class="form-label" for="category">Categoria</label>
+                            <InputSelect id="category" class="form-select" @bind-Value="formModel.CategoryId">
+                                <option value="@Guid.Empty">Selecione</option>
+                                @foreach (var category in categories)
+                                {
+                                    <option value="@category.Id">@category.Description</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+
+                    <aside class="image-section">
+                        <label class="form-label">Imagem do produto</label>
+                        <InputFile OnChange="OnImageSelectedAsync" class="form-control" accept="image/png,image/jpeg,image/webp" />
+
+                        <div class="image-preview">
+                            @if (!string.IsNullOrWhiteSpace(imagePreviewUrl))
+                            {
+                                <img src="@imagePreviewUrl" alt="Preview da imagem" />
+                            }
+                            else
+                            {
+                                <span>Preview da imagem</span>
+                            }
+                        </div>
+                    </aside>
+                </div>
+
+                <ValidationSummary />
+
+                <footer class="modal-actions">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CloseModal" disabled="@isSubmitting">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                        @if (isSubmitting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        }
+                        <span>Salvar</span>
+                    </button>
+                </footer>
+            </EditForm>
+        </section>
+    </div>
+}
+
+<GoodHamburger.Components.Shared.AppToast Visible="@showToast" IsError="@toastIsError" Message="@toastMessage" />
+
+@code {
+    private const long MaxImageBytes = 5 * 1024 * 1024;
+
+    private readonly ProductFormModel formModel = new();
+    private List<ProductModel> products = [];
+    private List<CategoryModel> categories = [];
+
+    private int pageNumber = 1;
+    private int pageSize = 8;
+    private int totalItems;
+
+    private bool isLoading;
+    private bool isSubmitting;
+    private bool isEditing;
+    private bool isModalOpen;
+
+    private byte[]? selectedImageBytes;
+    private string? selectedImageName;
+    private string? selectedImageContentType;
+    private string? imagePreviewUrl;
+
+    private bool showToast;
+    private bool toastIsError;
+    private string? toastMessage;
+    private CancellationTokenSource? toastCts;
+
+    private int totalPages => totalItems <= 0 ? 1 : (int)Math.Ceiling(totalItems / (double)pageSize);
+    private bool CanGoPrevious => pageNumber > 1;
+    private bool CanGoNext => pageNumber < totalPages;
+    private int firstItemIndex => totalItems == 0 ? 0 : ((pageNumber - 1) * pageSize) + 1;
+    private int lastItemIndex => totalItems == 0 ? 0 : Math.Min(pageNumber * pageSize, totalItems);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInitialDataAsync();
+    }
+
+    private async Task LoadInitialDataAsync()
+    {
+        isLoading = true;
+
+        try
+        {
+            var categoriesTask = ProductApiService.GetCategoriesAsync();
+            var productsTask = ProductApiService.GetPagedProductsAsync(pageNumber, pageSize);
+
+            await Task.WhenAll(categoriesTask, productsTask);
+
+            categories = categoriesTask.Result;
+            ApplyPagedResult(productsTask.Result);
+        }
+        catch (Exception ex)
+        {
+            await ShowToastAsync($"Erro ao carregar os dados: {ex.Message}", true);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ReloadPageAsync()
+    {
+        await LoadProductsAsync();
+    }
+
+    private async Task LoadProductsAsync()
+    {
+        isLoading = true;
+
+        try
+        {
+            var paged = await ProductApiService.GetPagedProductsAsync(pageNumber, pageSize);
+            ApplyPagedResult(paged);
+
+            if (products.Count == 0 && totalItems > 0 && pageNumber > 1)
+            {
+                pageNumber--;
+                paged = await ProductApiService.GetPagedProductsAsync(pageNumber, pageSize);
+                ApplyPagedResult(paged);
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowToastAsync($"Erro ao carregar produtos: {ex.Message}", true);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ApplyPagedResult(PagedListModel<ProductModel> paged)
+    {
+        products = paged.CurrentItems ?? [];
+        pageNumber = paged.PageNumber <= 0 ? 1 : paged.PageNumber;
+        pageSize = paged.PageSize <= 0 ? pageSize : paged.PageSize;
+        totalItems = paged.TotalItems;
+    }
+
+    private void OpenCreateModal()
+    {
+        ResetForm();
+        isEditing = false;
+        isModalOpen = true;
+    }
+
+    private void OpenEditModal(ProductModel product)
+    {
+        formModel.Id = product.Id;
+        formModel.Name = product.Name;
+        formModel.Description = product.Description;
+        formModel.Price = product.Price;
+        formModel.CategoryId = product.CategoryId;
+
+        selectedImageBytes = null;
+        selectedImageName = null;
+        selectedImageContentType = null;
+        imagePreviewUrl = string.IsNullOrWhiteSpace(product.ImageBase64)
+            ? null
+            : $"data:image/png;base64,{product.ImageBase64}";
+
+        isEditing = true;
+        isModalOpen = true;
+    }
+
+    private void CloseModal()
+    {
+        if (isSubmitting)
+            return;
+
+        isModalOpen = false;
+        selectedImageBytes = null;
+        selectedImageName = null;
+        selectedImageContentType = null;
+        imagePreviewUrl = null;
+    }
+
+    private async Task OnImageSelectedAsync(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            var file = e.File;
+
+            if (file is null)
+                return;
+
+            if (!file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+            {
+                await ShowToastAsync("Selecione um arquivo de imagem valido.", true);
+                return;
+            }
+
+            if (file.Size > MaxImageBytes)
+            {
+                await ShowToastAsync("A imagem deve ter no maximo 5 MB.", true);
+                return;
+            }
+
+            selectedImageName = file.Name;
+            selectedImageContentType = file.ContentType;
+
+            using var stream = file.OpenReadStream(MaxImageBytes);
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+
+            selectedImageBytes = memoryStream.ToArray();
+            imagePreviewUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(selectedImageBytes)}";
+        }
+        catch (Exception ex)
+        {
+            selectedImageBytes = null;
+            selectedImageName = null;
+            selectedImageContentType = null;
+            imagePreviewUrl = null;
+            await ShowToastAsync($"Erro ao processar imagem: {ex.Message}", true);
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        isSubmitting = true;
+        ApiActionResult? result = null;
+        string toastText;
+        bool isToastError;
+
+        try
+        {
+            if (isEditing)
+            {
+                result = await ProductApiService.UpdateProductAsync(new UpdateProductRequest
+                {
+                    Id = formModel.Id,
+                    Name = formModel.Name,
+                    Description = formModel.Description,
+                    Price = formModel.Price,
+                    CategoryId = formModel.CategoryId
+                }, selectedImageBytes, selectedImageName, selectedImageContentType);
+            }
+            else
+            {
+                result = await ProductApiService.CreateProductAsync(new CreateProductRequest
+                {
+                    Name = formModel.Name,
+                    Description = formModel.Description,
+                    Price = formModel.Price,
+                    CategoryId = formModel.CategoryId
+                }, selectedImageBytes, selectedImageName, selectedImageContentType);
+            }
+        }
+        catch (Exception ex)
+        {
+            isSubmitting = false;
+            await InvokeAsync(StateHasChanged);
+            await ShowToastAsync($"Erro ao salvar produto: {ex.Message}", true);
+            return;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+
+        var successMessage = isEditing
+            ? "Produto atualizado com sucesso."
+            : "Produto cadastrado com sucesso.";
+        var errorMessage = isEditing
+            ? "Nao foi possivel atualizar o produto."
+            : "Nao foi possivel cadastrar o produto.";
+
+        toastText = ResolveActionMessage(result?.Message, successMessage, errorMessage, result?.Success == true);
+        isToastError = result?.Success != true;
+
+        if (result?.Success == true)
+        {
+            isModalOpen = false;
+            ResetForm();
+            await LoadProductsAsync();
+        }
+
+        await InvokeAsync(StateHasChanged);
+        await ShowToastAsync(toastText, isToastError);
+    }
+
+    private async Task DeleteAsync(Guid id)
+    {
+        isSubmitting = true;
+
+        try
+        {
+            var result = await ProductApiService.DeleteProductAsync(id);
+            await ShowToastAsync(result.Message, !result.Success);
+
+            if (!result.Success)
+                return;
+
+            if (products.Count == 1 && pageNumber > 1)
+                pageNumber--;
+
+            await LoadProductsAsync();
+        }
+        catch (Exception ex)
+        {
+            await ShowToastAsync($"Erro ao excluir produto: {ex.Message}", true);
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task PreviousPageAsync()
+    {
+        if (!CanGoPrevious || isLoading)
+            return;
+
+        pageNumber--;
+        await LoadProductsAsync();
+    }
+
+    private async Task NextPageAsync()
+    {
+        if (!CanGoNext || isLoading)
+            return;
+
+        pageNumber++;
+        await LoadProductsAsync();
+    }
+
+    private async Task ChangePageSizeAsync(ChangeEventArgs e)
+    {
+        if (e.Value is null || !int.TryParse(e.Value.ToString(), out var parsedPageSize))
+            return;
+
+        pageSize = parsedPageSize;
+        pageNumber = 1;
+        await LoadProductsAsync();
+    }
+
+    private void ResetForm()
+    {
+        formModel.Id = Guid.Empty;
+        formModel.Name = string.Empty;
+        formModel.Description = string.Empty;
+        formModel.Price = 0;
+        formModel.CategoryId = Guid.Empty;
+        selectedImageBytes = null;
+        selectedImageName = null;
+        selectedImageContentType = null;
+        imagePreviewUrl = null;
+    }
+
+    private static string GetInitials(string value)
+    {
+        var initials = value
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Take(2)
+            .Select(x => char.ToUpperInvariant(x[0]))
+            .ToArray();
+
+        return initials.Length == 0 ? "GH" : new string(initials);
+    }
+
+    private async Task ShowToastAsync(string message, bool isError)
+    {
+        toastCts?.Cancel();
+        toastCts = new CancellationTokenSource();
+
+        toastMessage = message;
+        toastIsError = isError;
+        showToast = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            await Task.Delay(3000, toastCts.Token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        showToast = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private static string ResolveActionMessage(string? apiMessage, string successMessage, string errorMessage, bool isSuccess)
+    {
+        if (!string.IsNullOrWhiteSpace(apiMessage))
+            return apiMessage;
+
+        return isSuccess ? successMessage : errorMessage;
+    }
+}

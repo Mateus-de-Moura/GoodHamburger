@@ -1,0 +1,271 @@
+@page "/cardapio"
+@page "/menu"
+@rendermode InteractiveServer
+@inject ProductApiService ProductApiService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Cardapio</PageTitle>
+
+<section class="landing-hero">
+    <div class="hero-content">
+        <p class="hero-kicker">Good Hamburger</p>
+        <h1>Cardapio artesanal para conquistar na primeira mordida</h1>
+      
+        <div class="hero-actions">
+            <button class="btn btn-primary" @onclick="GoToOrders">Fazer pedido</button>
+            <button class="btn btn-secondary" @onclick="RefreshMenuAsync" disabled="@isLoading">
+                @(isLoading ? "Atualizando..." : "Atualizar cardapio")
+            </button>
+        </div>
+    </div>
+
+    <div class="hero-panel">
+        <p>Total de itens</p>
+        <strong>@TotalItems</strong>
+        <small>Lanches, acompanhamentos e bebidas ativos no seu menu.</small>
+    </div>
+</section>
+
+@if (isLoading && !HasAnyItem())
+{
+    <p><em>Carregando cardapio...</em></p>
+}
+else if (!HasAnyItem())
+{
+    <section class="empty-state">
+        <h2>Sem itens no cardapio</h2>
+        <p>Cadastre produtos para montar sua landing de cardapio.</p>
+    </section>
+}
+else
+{
+    <section class="section-block">
+        <div class="section-header">
+            <h2>Lanches em destaque</h2>
+            <span>@menu.Sandwiches.Count item(ns)</span>
+        </div>
+
+        <div class="featured-grid">
+            @foreach (var item in menu.Sandwiches.OrderBy(i => i.Name))
+            {
+                <article class="featured-card">
+                    <div class="media-wrap">
+                        @if (TryGetImageSource(item.ProductId, out var imageSource))
+                        {
+                            <img src="@imageSource" alt="@item.Name" />
+                        }
+                        else
+                        {
+                            <div class="media-placeholder">@GetInitials(item.Name)</div>
+                        }
+                    </div>
+
+                    <div class="card-body">
+                        <h3>@item.Name</h3>
+                        <p class="item-description">@GetProductDescription(item.ProductId)</p>
+                        <p class="item-category">@item.Category</p>
+                        <strong>@item.Price.ToString("C")</strong>
+                    </div>
+                </article>
+            }
+        </div>
+    </section>
+
+    <section class="section-block">
+        <div class="section-header">
+            <h2>Monte seu combo</h2>
+        </div>
+
+        <div class="combo-grid">
+            <div class="combo-column">
+                <h3>Acompanhamentos</h3>
+                @if (menu.Sides.Count == 0)
+                {
+                    <p class="muted">Sem acompanhamentos no momento.</p>
+                }
+                else
+                {
+                    @foreach (var item in menu.Sides.OrderBy(i => i.Name))
+                    {
+                        <article class="secondary-card">
+                            <div class="secondary-media">
+                                @if (TryGetImageSource(item.ProductId, out var sideImageSource))
+                                {
+                                    <img src="@sideImageSource" alt="@item.Name" />
+                                }
+                                else
+                                {
+                                    <div class="media-placeholder">@GetInitials(item.Name)</div>
+                                }
+                            </div>
+
+                            <div class="secondary-body">
+                                <h4>@item.Name</h4>
+                                <p class="item-description">@GetProductDescription(item.ProductId)</p>
+                                <p class="item-category">@item.Category</p>
+                                <strong>@item.Price.ToString("C")</strong>
+                            </div>
+                        </article>
+                    }
+                }
+            </div>
+
+            <div class="combo-column">
+                <h3>Bebidas</h3>
+                @if (menu.Drinks.Count == 0)
+                {
+                    <p class="muted">Sem bebidas no momento.</p>
+                }
+                else
+                {
+                    @foreach (var item in menu.Drinks.OrderBy(i => i.Name))
+                    {
+                        <article class="secondary-card">
+                            <div class="secondary-media">
+                                @if (TryGetImageSource(item.ProductId, out var drinkImageSource))
+                                {
+                                    <img src="@drinkImageSource" alt="@item.Name" />
+                                }
+                                else
+                                {
+                                    <div class="media-placeholder">@GetInitials(item.Name)</div>
+                                }
+                            </div>
+
+                            <div class="secondary-body">
+                                <h4>@item.Name</h4>
+                                <p class="item-description">@GetProductDescription(item.ProductId)</p>
+                                <p class="item-category">@item.Category</p>
+                                <strong>@item.Price.ToString("C")</strong>
+                            </div>
+                        </article>
+                    }
+                }
+            </div>
+        </div>
+    </section>
+}
+
+<GoodHamburger.Components.Shared.AppToast Visible="@showToast" IsError="@toastIsError" Message="@toastMessage" />
+
+@code {
+    private MenuModel menu = new();
+    private Dictionary<Guid, ProductModel> productsById = [];
+    private bool isLoading;
+
+    private bool showToast;
+    private bool toastIsError;
+    private string? toastMessage;
+    private CancellationTokenSource? toastCts;
+
+    private int TotalItems => menu.Sandwiches.Count + menu.Sides.Count + menu.Drinks.Count + menu.Others.Count;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMenuAsync();
+    }
+
+    private async Task RefreshMenuAsync()
+    {
+        await LoadMenuAsync(showSuccessToast: true);
+    }
+
+    private async Task LoadMenuAsync(bool showSuccessToast = false)
+    {
+        isLoading = true;
+
+        try
+        {
+            var menuTask = ProductApiService.GetMenuAsync();
+            var productsTask = ProductApiService.GetProductsAsync();
+
+            await Task.WhenAll(menuTask, productsTask);
+
+            menu = menuTask.Result;
+            productsById = productsTask.Result.ToDictionary(p => p.Id);
+
+            if (showSuccessToast)
+                await ShowToastAsync("Cardapio atualizado com sucesso.", false);
+        }
+        catch (Exception ex)
+        {
+            await ShowToastAsync($"Erro ao carregar cardapio: {ex.Message}", true);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private bool HasAnyItem()
+        => menu.Sandwiches.Count > 0 ||
+           menu.Sides.Count > 0 ||
+           menu.Drinks.Count > 0 ||
+           menu.Others.Count > 0;
+
+    private bool TryGetImageSource(Guid productId, out string source)
+    {
+        source = string.Empty;
+
+        if (!productsById.TryGetValue(productId, out var product) ||
+            string.IsNullOrWhiteSpace(product.ImageBase64))
+        {
+            return false;
+        }
+
+        source = $"data:image/png;base64,{product.ImageBase64}";
+        return true;
+    }
+
+    private static string GetInitials(string value)
+    {
+        var initials = value
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Take(2)
+            .Select(x => char.ToUpperInvariant(x[0]))
+            .ToArray();
+
+        return initials.Length == 0
+            ? "GH"
+            : new string(initials);
+    }
+
+    private string GetProductDescription(Guid productId)
+    {
+        if (!productsById.TryGetValue(productId, out var product) ||
+            string.IsNullOrWhiteSpace(product.Description))
+        {
+            return "Descricao nao informada.";
+        }
+
+        return product.Description;
+    }
+
+    private async Task ShowToastAsync(string message, bool isError)
+    {
+        toastCts?.Cancel();
+        toastCts = new CancellationTokenSource();
+
+        toastMessage = message;
+        toastIsError = isError;
+        showToast = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            await Task.Delay(3000, toastCts.Token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        showToast = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void GoToOrders()
+    {
+        NavigationManager.NavigateTo("/pedidos");
+    }
+}

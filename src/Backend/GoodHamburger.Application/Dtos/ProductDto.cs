@@ -1,16 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace GoodHamburger.Application.Dtos
 {
     public class ProductDto
     {
         public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public decimal Price { get; set; }
-         public string ImageBase64 { get; set; }
+        public Guid CategoryId { get; set; }
+        public string CategoryDescription { get; set; } = string.Empty;
+        public string? ImageBase64 { get; set; }
     }
 }

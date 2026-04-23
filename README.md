@@ -1,118 +1,98 @@
-# GoodHamburger - Backend
+# GoodHamburger
 
-Este backend suporta 2 provedores de banco:
+Projeto com API em .NET 9 + WebApp Blazor Server para gestao de cardapio, produtos e pedidos.
 
-- `SqlServer`
-- `InMemory`
+## Decisoes de arquitetura
 
-## Configuracao atual
+- API em estilo minimalista com `FastEndpoints` para rotas mais organizadas e baixo overhead para o cenario de sistema pequeno.
+- Arquitetura em camadas seguindo `Clean Architecture`:
+  - `Api`
+  - `Application`
+  - `Domain`
+  - `Infrastructure`
+- Desacoplamento entre API e regras de aplicacao com `MediatR` + padrao `CQRS`.
+- Validacoes com `FluentValidation`.
+- Padrao de retorno com `Ardalis.Result`.
+- Persistencia com EF Core suportando `SqlServer` e `InMemory`.
 
-O arquivo `src/Backend/GoodHamburger.Api/appsettings.Development.json` ja vem com:
+## Observacao sobre Network no navegador (Blazor Server)
 
-- `Database:Provider = "SqlServer"`
-- instancia SQL Server: `DESKTOP-3UTOJPR\\SQLEXPRESS`
+O frontend roda com `@rendermode InteractiveServer` (Blazor Server).
+Por isso, no DevTools do browser voce normalmente nao vera uma request HTTP para cada clique/acao.
 
-Trecho:
+Em vez disso, o browser mantem uma conexao SignalR (`/_blazor`) e os eventos trafegam nesse canal.
+As chamadas para a API podem acontecer no servidor, entao tambem nao aparecem como request individual no Network do browser.
 
-```json
-"Database": {
-  "Provider": "SqlServer",
-  "InMemoryDatabaseName": "GoodHamburgerDb"
-},
-"ConnectionStrings": {
-  "DefaultConnection": "Server=DESKTOP-3UTOJPR\\SQLEXPRESS;Database=GoodHamburgerDb;Trusted_Connection=True;TrustServerCertificate=True;"
-}
-```
+## O que ficou fora (deliberadamente)
 
-## Como alternar entre SQL Server e InMemory
+- Autenticacao e autorizacao com JWT.
+  - Para um sistema real, esse seria um ponto inicial importante (cadastro/login/controle de acesso).
+- Armazenamento de imagens em Blob Storage.
+  - Neste projeto, as imagens dos produtos foram mantidas em banco para simplificar os testes.
 
-### Opcao 1: alterando appsettings
+## Como executar
 
-No arquivo `src/Backend/GoodHamburger.Api/appsettings.Development.json`:
+### Pre-requisitos
 
-1. Para usar SQL Server:
+- .NET SDK 9
+- SQL Server (apenas se quiser rodar com `SqlServer`)
 
-```json
-"Database": {
-  "Provider": "SqlServer"
-}
-```
+### 1) Escolher o provider do banco
 
-2. Para usar InMemory:
+Voce pode usar `InMemory` (mais rapido para teste) ou `SqlServer`.
 
-```json
-"Database": {
-  "Provider": "InMemory",
-  "InMemoryDatabaseName": "GoodHamburgerDb"
-}
-```
-
-### Opcao 2: sobrescrevendo por variavel de ambiente (PowerShell)
-
-Sem editar arquivo, para a sessao atual:
-
-1. SQL Server
+Opcao via variavel de ambiente (PowerShell):
 
 ```powershell
-$env:Database__Provider = "SqlServer"
-```
-
-2. InMemory
-
-```powershell
+# InMemory
 $env:Database__Provider = "InMemory"
+
+# SqlServer
+$env:Database__Provider = "SqlServer"
+
+# Connection string (quando SqlServer)
+$env:ConnectionStrings__DefaultConnection = "Server=DESKTOP-3UTOJPR\SQLEXPRESS;Database=GoodHamburgerDb;Trusted_Connection=True;TrustServerCertificate=True;"
 ```
 
-Se quiser trocar a connection string via ambiente:
+Tambem e possivel configurar direto no arquivo:
+`src/Backend/GoodHamburger.Api/appsettings.Development.json`
 
-```powershell
-$env:ConnectionStrings__DefaultConnection = "Server=DESKTOP-3UTOJPR\\SQLEXPRESS;Database=GoodHamburgerDb;Trusted_Connection=True;TrustServerCertificate=True;"
-```
-
-## Rodar a API
+### 2) Rodar a API
 
 ```powershell
 dotnet run --project src/Backend/GoodHamburger.Api/GoodHamburger.Api.csproj
 ```
 
-Swagger (Development):
-
+Swagger:
 - `http://localhost:5092/swagger`
 - `https://localhost:7245/swagger`
 
-## Criar migrations (quando necessario)
+### 3) Rodar o WebApp
 
-Se ainda nao houver migrations, crie a inicial:
+```powershell
+dotnet run --project src/WebApp/GoodHamburger/GoodHamburger.csproj
+```
+
+Web:
+- `http://localhost:5044`
+- `https://localhost:7112`
+
+## Migrations (somente SQL Server)
+
+Se precisar criar/aplicar migrations manualmente:
 
 ```powershell
 dotnet ef migrations add InitialCreate --project src/Backend/GoodHamburger.Infrastructure/GoodHamburger.Infrastructure.csproj --startup-project src/Backend/GoodHamburger.Api/GoodHamburger.Api.csproj --output-dir Migrations
-```
-
-No Package Manager Console (Visual Studio), use com projeto e startup explicitos:
-
-```powershell
-Add-Migration InitialCreate -Project GoodHamburger.Infrastructure -StartupProject GoodHamburger.Api -OutputDir Migrations
-```
-
-Para aplicar no banco:
-
-```powershell
-Update-Database -Project GoodHamburger.Infrastructure -StartupProject GoodHamburger.Api
-```
-
-CLI equivalente:
-
-```powershell
 dotnet ef database update --project src/Backend/GoodHamburger.Infrastructure/GoodHamburger.Infrastructure.csproj --startup-project src/Backend/GoodHamburger.Api/GoodHamburger.Api.csproj
 ```
 
-Depois, ao iniciar a API com `Database:Provider = "SqlServer"`, o `Migrate` sera executado automaticamente.
+No startup com `SqlServer`, a API tenta criar o banco se necessario e executa `Migrate`.
+Com `InMemory`, os dados sao temporarios e sao perdidos ao reiniciar.
 
-## Observacoes
+## Resumo rapido para testar
 
-- Com `SqlServer`, o backend usa a `ConnectionStrings:DefaultConnection`.
-- Com `SqlServer`, no startup a API tenta criar o banco (se nao existir) e depois executa `Migrate` automaticamente.
-- Com `InMemory`, os dados sao volateis e sao perdidos ao reiniciar a API.
-- Com `InMemory`, o startup chama `EnsureCreated`.
-- Para o `Migrate` aplicar mudancas de schema, e necessario ter migrations criadas no projeto.
-- Nao existe fallback de connection string em codigo: se `DefaultConnection` nao estiver no appsettings/ambiente, a inicializacao de SQL Server e o design-time do EF vao falhar.
+1. Suba a API com `InMemory` ou `SqlServer`.
+2. Suba o WebApp.
+3. Acesse `https://localhost:7112`.
+4. Cadastre/edite produtos (com imagem), veja o cardapio e finalize pedidos.
+5. Se quiser validar endpoints isoladamente, use o Swagger da API.

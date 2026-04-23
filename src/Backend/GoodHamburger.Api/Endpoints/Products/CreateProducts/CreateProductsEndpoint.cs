@@ -1,10 +1,10 @@
 ﻿using FastEndpoints;
-using GoodHamburger.Application.Operations.CreateProducts;
+using GoodHamburger.Application.Operations.Products.CreateProducts;
 using MediatR;
 
 namespace GoodHamburger.Api.Endpoints.Products.CreateProducts
 {
-    public class CreateProductsEndpoint(IMediator mediator) : Endpoint<CreateProductsRequest>
+    public class CreateProductsEndpoint(IMediator mediator, AutoMapper.IMapper mapper) : Endpoint<CreateProductsRequest>
     {
         public override void Configure()
         {
@@ -12,18 +12,16 @@ namespace GoodHamburger.Api.Endpoints.Products.CreateProducts
             AllowAnonymous();
             AllowFileUploads();
         }
-        public override Task HandleAsync(CreateProductsRequest req, CancellationToken ct)
+        public override async Task HandleAsync(CreateProductsRequest req, CancellationToken ct)
         {
-            var result = mediator.Send(new CreateProductsCommand
-            {
-                Name = req.Name,
-                Description = req.Description,
-                Price = req.Price,
-                Image = req.Image,
-                CategoryId = req.CategoryId
-            }, ct).Result;
+            var mapped = mapper.Map<CreateProductsCommand>(req);
 
-            return Send.OkAsync(ct);
+            var result = await mediator.Send(mapped, ct);
+
+            if (result.IsSuccess)
+                await Send.CreatedAtAsync(result.Value, ct);
+            else
+                await Send.OkAsync(result.Errors.First().ToString(), ct);
         }
     }
 }

@@ -1,10 +1,29 @@
 using GoodHamburger.Components;
+using GoodHamburger.Configuration;
+using GoodHamburger.Services;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents(options =>
+    {
+        options.DetailedErrors = builder.Environment.IsDevelopment();
+    });
+builder.Services.Configure<ApiSettings>(builder.Configuration.GetSection("Api"));
+builder.Services.AddHttpClient<ProductApiService>((serviceProvider, client) =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<ApiSettings>>().Value;
+    var baseUrl = string.IsNullOrWhiteSpace(options.BaseUrl)
+        ? "http://localhost:5092/"
+        : options.BaseUrl;
+
+    if (!baseUrl.EndsWith('/'))
+        baseUrl += "/";
+
+    client.BaseAddress = new Uri(baseUrl);
+});
 
 var app = builder.Build();
 
