@@ -37,7 +37,7 @@ As chamadas para a API podem acontecer no servidor, entao tambem nao aparecem co
 - .NET SDK 9
 - SQL Server (apenas se quiser rodar com `SqlServer`)
 
-### 1) Escolher o provider do banco
+### 1) Ajustar configuracao do banco
 
 Voce pode usar `InMemory` (mais rapido para teste) ou `SqlServer`.
 
@@ -57,42 +57,24 @@ $env:ConnectionStrings__DefaultConnection = "Server=DESKTOP-3UTOJPR\SQLEXPRESS;D
 Tambem e possivel configurar direto no arquivo:
 `src/Backend/GoodHamburger.Api/appsettings.Development.json`
 
-### 2) Rodar a API
+### 2) Executar pelo perfil do Visual Studio
 
-```powershell
-dotnet run --project src/Backend/GoodHamburger.Api/GoodHamburger.Api.csproj
-```
+O projeto ja possui perfil configurado no Visual Studio para subir API + WebApp e aplicar migrations automaticamente.
 
-Swagger:
-- `http://localhost:5092/swagger`
-- `https://localhost:7245/swagger`
+Entao, para executar:
 
-### 3) Rodar o WebApp
+1. Ajuste apenas `ConnectionStrings:DefaultConnection` (quando usar `SqlServer`).
+2. Abra a solucao no Visual Studio.
+3. Execute o perfil configurado.
 
-```powershell
-dotnet run --project src/WebApp/GoodHamburger/GoodHamburger.csproj
-```
-
-Web:
-- `http://localhost:5044`
-- `https://localhost:7112`
-
-## Migrations (somente SQL Server)
-
-Se precisar criar/aplicar migrations manualmente:
-
-```powershell
-dotnet ef migrations add InitialCreate --project src/Backend/GoodHamburger.Infrastructure/GoodHamburger.Infrastructure.csproj --startup-project src/Backend/GoodHamburger.Api/GoodHamburger.Api.csproj --output-dir Migrations
-dotnet ef database update --project src/Backend/GoodHamburger.Infrastructure/GoodHamburger.Infrastructure.csproj --startup-project src/Backend/GoodHamburger.Api/GoodHamburger.Api.csproj
-```
-
-No startup com `SqlServer`, a API tenta criar o banco se necessario e executa `Migrate`.
-Com `InMemory`, os dados sao temporarios e sao perdidos ao reiniciar.
+Observacao:
+- Com `InMemory`, os dados sao temporarios e sao perdidos ao reiniciar.
+- Com `SqlServer`, o startup aplica migrations automaticamente no perfil ja configurado.
 
 ## Resumo rapido para testar
 
-1. Suba a API com `InMemory` ou `SqlServer`.
-2. Suba o WebApp.
-3. Acesse `https://localhost:7112`.
+1. Ajuste o provider (`InMemory` ou `SqlServer`) e a connection string quando necessario.
+2. Execute o perfil configurado no Visual Studio.
+3. Acesse a aplicacao (porta definida no seu perfil).
 4. Cadastre/edite produtos (com imagem), veja o cardapio e finalize pedidos.
-5. Se quiser validar endpoints isoladamente, use o Swagger da API.
+5. Se quiser validar endpoints isoladamente, use o Swagger aberto pelo proprio perfil.
